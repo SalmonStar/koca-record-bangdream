@@ -70,6 +70,28 @@ h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
 .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:12px;color:var(--muted)}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
 
+.rank-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.rank-head h2{font-size:20px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{font:inherit;font-size:12px;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:99px;padding:3px 11px;cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.tabs button:focus-visible{outline:2px solid var(--stamp);outline-offset:2px}
+.podium{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:end;text-align:center}
+.podium .p{display:grid;justify-items:center;gap:6px;min-width:0}
+.podium .p1{order:2}.podium .p2{order:1}.podium .p3{order:3}
+.av{position:relative;width:clamp(64px,18vw,96px);aspect-ratio:1;border-radius:50%;padding:4px;background:var(--medal)}
+.p1 .av{width:clamp(80px,24vw,124px)}
+.av img,.av span{width:100%;height:100%;border-radius:50%;object-fit:cover;display:grid;place-items:center;background:var(--paper);
+  font-family:var(--f-display);font-weight:900;font-size:28px;color:var(--muted)}
+.av b{position:absolute;bottom:-4px;right:-4px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
+  background:var(--medal);color:#fff;font-family:var(--f-display);font-weight:900;font-size:14px;border:2px solid var(--card)}
+.p .nm{font-weight:700;font-size:14px;overflow-wrap:anywhere;text-decoration:none}
+.p .nm:hover{text-decoration:underline}
+.p .ct{font-family:var(--f-display);font-weight:900;font-size:22px;color:var(--stamp);line-height:1}
+.p .ct small{font-size:12px;color:var(--muted);font-weight:700;margin-left:2px}
+.p1{--medal:#D9A521}.p2{--medal:#9AA4B5}.p3{--medal:#C07A4A}
+.rank-foot{margin:16px 0 0;color:var(--muted);font-size:13px}
+.rank-empty{color:var(--muted);margin:0}
 .week{display:grid;gap:14px}
 .week-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:8px}
 .week-head h2{font-size:18px}
@@ -126,6 +148,15 @@ footer{color:var(--muted);font-size:12px;text-align:center;display:grid;gap:4px}
         <div class="bar"><i id="goalBar" style="width:0"></i></div>
         <small id="goalNote"></small></div>
     </dl>
+  </section>
+
+  <section class="card" aria-labelledby="rankTitle">
+    <div class="rank-head">
+      <h2 id="rankTitle">角色排行</h2>
+      <div class="tabs" id="rankTabs" role="group" aria-label="選擇日期"></div>
+    </div>
+    <div id="podium"></div>
+    <p class="rank-foot" id="rankFoot"></p>
   </section>
 
   <section class="card" aria-labelledby="stampTitle">
@@ -196,6 +227,32 @@ function render(){
       : `這週才過了 ${dayN} 天，上週一共 ${fmt(lastWeek.items)} 筆，進度很穩。`;
   } else cheer = `這週已經新增 ${fmt(thisWeek.items)} 筆，每一筆都是有人搜尋時會找到的資料。`;
   document.getElementById('cheer').textContent = cheer;
+
+  // character ranking
+  const dayKeys = Object.keys(R.days).filter(k => R.days[k].chars && (R.days[k].chars.length || R.days[k].group)).sort().reverse().slice(0,7);
+  const tabs = document.getElementById('rankTabs'), podium = document.getElementById('podium'), foot = document.getElementById('rankFoot');
+  const views = dayKeys.map(k => ({key:k, label: k===R.today ? '今天' : md(parse(k)), chars: R.days[k].chars, group: R.days[k].group, scope:'這天'}));
+  if (thisWeek.chars && thisWeek.chars.length) views.push({key:'week', label:'本週', chars: thisWeek.chars, group: thisWeek.group, scope:'本週'});
+  const M = R.members || {};
+  const showRank = v => {
+    tabs.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === v.key));
+    const top = v.chars.slice(0,3);
+    podium.innerHTML = '<div class="podium">' + top.map(([name,n],i) => {
+      const m = M[name] || {};
+      const pic = m.img ? `<img src="${esc(m.img)}" alt="${esc(name)}" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${esc(name).slice(0,1)}'}))">` : `<span>${esc(name).slice(0,1)}</span>`;
+      const label = m.url ? `<a class="nm" href="${esc(m.url)}" target="_blank" rel="noopener">${esc(name)}</a>` : `<span class="nm">${esc(name)}</span>`;
+      return `<div class="p p${i+1}"><div class="av">${pic}<b>${i+1}</b></div>${label}<div class="ct num">+${n}<small>筆</small></div></div>`;
+    }).join('') + '</div>';
+    const rest = v.chars.slice(3,8).map(([name,n]) => `${name} ${n}`).join('、');
+    foot.textContent = [rest ? `接著是 ${rest}` : '', v.group ? `另有 ${v.group} 筆多人款（團體、合照）不列入個人排名` : ''].filter(Boolean).join('。');
+  };
+  if (!views.length) {
+    podium.innerHTML = '<p class="rank-empty">從下一次自動更新開始統計：每天新增的圖鑑會依角色排名，前三名會出現在這裡。</p>';
+  } else {
+    tabs.innerHTML = views.map(v => `<button type="button" data-k="${v.key}">${v.label}</button>`).join('');
+    tabs.querySelectorAll('button').forEach(b => b.addEventListener('click', () => showRank(views.find(v => v.key === b.dataset.k))));
+    showRank(views[0]);
+  }
 
   // stamp grid
   const start = parse(R.stamp_start);

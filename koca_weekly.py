@@ -35,6 +35,8 @@ TZ = timezone(timedelta(hours=8))  # 台北時間
 ROOT = Path(__file__).resolve().parent
 SNAP_DIR = ROOT / "data" / "snapshots"
 TEMPLATE = ROOT / "template.html"
+ITEMS_STATE = ROOT / "data" / "items_state.json"   # 上次看到的所有圖鑑 id（每天覆寫）
+MEMBERS = ROOT / "data" / "members.json"           # 角色名稱與 KOCA 大頭照
 OUT = ROOT / "docs" / "index.html"
 STAMP_WEEKS = 8  # 集章卡顯示最近幾週
 
@@ -113,6 +115,16 @@ def fetch_snapshot() -> dict:
 
     series = paged(s, f"/api/planets/{PLANET}/series", limit=50)
     batches = paged(s, f"/api/planets/{PLANET}/batches")
+    all_items = paged(s, f"/api/planets/{PLANET}/items")
+    members = [
+        {
+            "name": m["name"],
+            "id": m["id"],
+            "img": ((m.get("media") or [{}])[0].get("thumbnailUrl") or (m.get("cover") or {}).get("thumbnailUrl")),
+            "url": f"{BASE}/{LNG}/planets/{m['id']}",
+        }
+        for m in planet.get("members", [])
+    ]
 
     items = profile_items or (me or {}).get("totalItemCreateCount")
     if items is None:
@@ -129,7 +141,42 @@ def fetch_snapshot() -> dict:
             [x["id"], x["name"], x["createdAt"][:19], x.get("totalItems", 0)] for x in series
         ],
         "batches": [[x["id"], x["name"], x.get("releaseDate")] for x in batches],
+        "_items": [[x["id"], x.get("artistName") or ""] for x in all_items],
+        "_members": members,
     }
+
+
+# ── 角色統計 ──────────────────────────────────────────
+def norm_name(s: str) -> str:
+    return re.sub(r"[\s\u3000]", "", s or "")
+
+
+def count_new_items(snap: dict) -> None:
+    """跟上次的圖鑑 id 比對，把新增的圖鑑依角色分類，寫進 snap["new_items"]。
+    單一角色的圖鑑算給該角色；標了多個角色的（團體款、合照）另計，不分給個人。"""
+    items = snap.pop("_items", None)
+    members = snap.pop("_members", None)
+    if members:
+        MEMBERS.write_text(json.dumps(members, ensure_ascii=False, indent=0), encoding="utf-8")
+    if items is None:
+        return
+    display = {norm_name(m["name"]): m["name"] for m in (members or [])}
+    if ITEMS_STATE.exists():
+        prev = set(json.loads(ITEMS_STATE.read_text(encoding="utf-8")))
+        new = [it for it in items if it[0] not in prev]
+        chars: dict[str, int] = {}
+        group = other = 0
+        for _id, artist in new:
+            parts = [norm_name(a) for a in artist.split(",") if norm_name(a)]
+            if len(parts) == 1 and parts[0] in display:
+                name = display[parts[0]]
+                chars[name] = chars.get(name, 0) + 1
+            elif len(parts) > 1:
+                group += 1
+            else:
+                other += 1
+        snap["new_items"] = {"total": len(new), "chars": chars, "group": group, "other": other}
+    ITEMS_STATE.write_text(json.dumps(sorted(it[0] for it in items)), encoding="utf-8")
 
 
 # ── 快照存取 ──────────────────────────────────────────
@@ -194,6 +241,14 @@ def build_report(snaps: list[tuple[date, dict]], today: date) -> dict:
                 if x[0] in before and x[3] > before[x[0]]:
                     g[x[0]] = g.get(x[0], 0) + x[3] - before[x[0]]
 
+    # 每天各角色新增的圖鑑（記在該次快照的日期）
+    for d, sn in snaps:
+        ni = sn.get("new_items")
+        if ni:
+            day = days.setdefault(d.isoformat(), {"items": 0, "batches": [], "series": 0})
+            day["chars"] = ni["chars"]
+            day["group"] = ni["group"]
+
     names = {x[0]: x[1] for x in series_all}
     series_by_day: dict[str, list] = {}
     for sid, name, created, _total in series_all:
@@ -210,8 +265,11 @@ def build_report(snaps: list[tuple[date, dict]], today: date) -> dict:
     for k, d in days.items():
         w = monday(date.fromisoformat(k)).isoformat()
         wk = weeks.setdefault(
-            w, {"start": w, "items": None, "batches": [], "series": [], "grown": {}}
+            w, {"start": w, "items": None, "batches": [], "series": [], "grown": {}, "chars": {}, "group": 0}
         )
+        for name, n in d.get("chars", {}).items():
+            wk["chars"][name] = wk["chars"].get(name, 0) + n
+        wk["group"] += d.get("group", 0)
         if tracked_from and k >= tracked_from:
             wk["items"] = (wk["items"] or 0) + d["items"]
         wk["batches"] += [{"id": b[0], "name": b[1], "release": b[2], "date": k} for b in d["batches"]]
@@ -233,18 +291,21 @@ def build_report(snaps: list[tuple[date, dict]], today: date) -> dict:
             ],
             key=lambda g: -g["n"],
         )
+        wk["chars"] = sorted(wk["chars"].items(), key=lambda kv: -kv[1])
         if wk["items"] or wk["batches"] or wk["series"] or wk["grown"]:
             week_list.append(wk)
     # 本週即使空的也要有
     this_w = monday(today).isoformat()
     if not week_list or week_list[0]["start"] != this_w:
         week_list.insert(0, {"start": this_w, "items": 0 if tracked_from else None,
-                             "batches": [], "series": [], "grown": []})
+                             "batches": [], "series": [], "grown": [], "chars": [], "group": 0})
 
     stamp_start = monday(today) - timedelta(weeks=STAMP_WEEKS - 1)
     stamp_days = {
         k: {"items": v["items"] if tracked_from and k >= tracked_from else None,
-            "series": v["series"], "batches": len(v["batches"])}
+            "series": v["series"], "batches": len(v["batches"]),
+            "chars": sorted(v.get("chars", {}).items(), key=lambda kv: -kv[1]),
+            "group": v.get("group", 0)}
         for k, v in days.items()
         if date.fromisoformat(k) >= stamp_start
     }
@@ -263,6 +324,8 @@ def build_report(snaps: list[tuple[date, dict]], today: date) -> dict:
         "weeks": week_list,
         "stamp_start": stamp_start.isoformat(),
         "days": stamp_days,
+        "members": {m["name"]: {"img": m["img"], "url": m["url"]}
+                    for m in (json.loads(MEMBERS.read_text(encoding="utf-8")) if MEMBERS.exists() else [])},
     }
 
 
@@ -290,9 +353,11 @@ def main() -> int:
     today = date.fromisoformat(args.date) if args.date else datetime.now(TZ).date()
     if args.fixture:
         snap = json.loads(Path(args.fixture).read_text(encoding="utf-8"))
+        count_new_items(snap)
         save_snapshot(snap, today)
     elif not args.no_fetch:
         snap = fetch_snapshot()
+        count_new_items(snap)
         p = save_snapshot(snap, today)
         print(f"已存快照 {p.name}：{NICKNAME} 累計 {snap['user']['items']} 筆，"
               f"{len(snap['series'])} 個系列，{len(snap['batches'])} 個收藏集")
