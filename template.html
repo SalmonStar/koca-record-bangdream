@@ -237,13 +237,13 @@ function render(){
   const showRank = v => {
     tabs.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === v.key));
     const top = v.chars.slice(0,3);
-    podium.innerHTML = '<div class="podium">' + top.map(([name,n],i) => {
-      const m = M[name] || {};
+    podium.innerHTML = '<div class="podium">' + top.map(([key,n],i) => {
+      const m = M[key] || {}, name = m.name || key;
       const pic = m.img ? `<img src="${esc(m.img)}" alt="${esc(name)}" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${esc(name).slice(0,1)}'}))">` : `<span>${esc(name).slice(0,1)}</span>`;
       const label = m.url ? `<a class="nm" href="${esc(m.url)}" target="_blank" rel="noopener">${esc(name)}</a>` : `<span class="nm">${esc(name)}</span>`;
       return `<div class="p p${i+1}"><div class="av">${pic}<b>${i+1}</b></div>${label}<div class="ct num">+${n}<small>筆</small></div></div>`;
     }).join('') + '</div>';
-    const rest = v.chars.slice(3,8).map(([name,n]) => `${name} ${n}`).join('、');
+    const rest = v.chars.slice(3,8).map(([key,n]) => `${(M[key]||{}).name || key} ${n}`).join('、');
     foot.textContent = [rest ? `接著是 ${rest}` : '', v.group ? `另有 ${v.group} 筆多人款（團體、合照）不列入個人排名` : ''].filter(Boolean).join('。');
   };
   if (!views.length) {

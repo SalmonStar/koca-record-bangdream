@@ -160,7 +160,8 @@ def count_new_items(snap: dict) -> None:
         MEMBERS.write_text(json.dumps(members, ensure_ascii=False, indent=0), encoding="utf-8")
     if items is None:
         return
-    display = {norm_name(m["name"]): m["name"] for m in (members or [])}
+    # 用角色的 KOCA id 計數，之後在 KOCA 改名字、換立繪，舊紀錄也會跟著顯示新的
+    by_name = {norm_name(m["name"]): m["id"] for m in (members or [])}
     if ITEMS_STATE.exists():
         prev = set(json.loads(ITEMS_STATE.read_text(encoding="utf-8")))
         new = [it for it in items if it[0] not in prev]
@@ -168,9 +169,9 @@ def count_new_items(snap: dict) -> None:
         group = other = 0
         for _id, artist in new:
             parts = [norm_name(a) for a in artist.split(",") if norm_name(a)]
-            if len(parts) == 1 and parts[0] in display:
-                name = display[parts[0]]
-                chars[name] = chars.get(name, 0) + 1
+            if len(parts) == 1 and parts[0] in by_name:
+                mid = by_name[parts[0]]
+                chars[mid] = chars.get(mid, 0) + 1
             elif len(parts) > 1:
                 group += 1
             else:
@@ -339,7 +340,7 @@ def build_report(snaps: list[tuple[date, dict]], today: date) -> dict:
         "weeks": week_list,
         "stamp_start": stamp_start.isoformat(),
         "days": stamp_days,
-        "members": {m["name"]: {"img": m["img"], "url": m["url"]}
+        "members": {m["id"]: {"name": m["name"], "img": m["img"], "url": m["url"]}
                     for m in (json.loads(MEMBERS.read_text(encoding="utf-8")) if MEMBERS.exists() else [])},
     }
 
