@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>俗頭的 KOCA 集章卡</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/* Layout: a stamp card. Hero tally → daily stamp grid → weekly ledger, newest first. */
+:root{
+  --paper:#EDF0F5; --card:#FFFFFF; --ink:#1C2540; --muted:#5E6782; --line:#D5DAE5;
+  --stamp:#E0457B; --stamp-soft:#FBE3EC; --gold:#B87D0C;
+  --f-display:"Zen Maru Gothic","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#121829; --card:#1B2338; --ink:#E8ECF6; --muted:#9AA3BD; --line:#2C3652;
+  --stamp:#FF6E9C; --stamp-soft:#3A2033; --gold:#F0B440; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#121829; --card:#1B2338; --ink:#E8ECF6; --muted:#9AA3BD; --line:#2C3652;
+  --stamp:#FF6E9C; --stamp-soft:#3A2033; --gold:#F0B440; color-scheme:dark}
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 56px}
+a{color:inherit}
+.wrap{max-width:880px;margin:0 auto;display:grid;gap:40px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
+.num{font-variant-numeric:tabular-nums}
+
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.top b{font-family:var(--f-display);color:var(--ink);font-size:15px}
+
+.hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:28px;align-items:end}
+.hero h1{font-size:15px;font-weight:700;color:var(--muted);letter-spacing:.04em}
+.big{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:6px 0 4px}
+.big b{font-family:var(--f-display);font-weight:900;font-size:clamp(72px,16vw,128px);line-height:.9;color:var(--stamp)}
+.big span{font-family:var(--f-display);font-size:22px;font-weight:700}
+.cheer{font-size:17px;margin:8px 0 0;max-width:30em}
+.tally{display:grid;gap:14px;border-left:2px dashed var(--line);padding-left:22px;margin:0}
+.tally>div{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.tally dt{color:var(--muted);font-size:13px}
+.tally dd{margin:0;font-family:var(--f-display);font-weight:900;font-size:26px}
+.goal{display:block!important}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--gold);border-radius:99px}
+.goal small{color:var(--muted);font-size:12px}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px clamp(14px,3vw,26px)}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.card-head h2{font-size:20px}
+.card-head p{margin:0;color:var(--muted);font-size:13px}
+.grid{display:grid;grid-template-columns:auto repeat(7,minmax(0,1fr));gap:6px;align-items:center}
+.dow{font-size:11px;text-align:center;color:var(--muted);letter-spacing:.06em}
+.wk{font-size:11px;color:var(--muted);padding-right:6px;white-space:nowrap}
+.day{aspect-ratio:1;max-width:100%;border-radius:50%;display:grid;place-items:center;position:relative;
+  border:1.5px dashed var(--line);font-size:11px;color:var(--muted)}
+.day.future{opacity:.35}
+.day.today{border-style:solid;border-color:var(--ink)}
+.day.hit{border:none;color:var(--stamp)}
+.day.hit::before{content:"";position:absolute;inset:5%;border-radius:50%;border:2.5px solid var(--stamp);background:var(--stamp-soft);transform:rotate(var(--r,0deg))}
+.day.hit.soft{color:var(--gold)}
+.day.hit.soft::before{border-color:var(--gold);background:transparent;border-style:dashed}
+.day.hit b{position:relative;font-family:var(--f-display);font-weight:900;font-size:clamp(13px,3.2vw,20px);line-height:1}
+.day.hit small{position:absolute;bottom:14%;font-size:9px;opacity:.8}
+.day.hit em{position:absolute;top:9%;right:15%;font-style:normal;font-size:9px;opacity:.7}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+
+.week{display:grid;gap:14px}
+.week-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:8px}
+.week-head h2{font-size:18px}
+.week-head .ct{font-family:var(--f-display);font-weight:900;color:var(--stamp)}
+.week-head .rng{color:var(--muted);font-size:13px}
+.group{display:grid;gap:2px}
+.group h3{font-size:13px;color:var(--muted);font-weight:700;letter-spacing:.04em;margin-bottom:4px}
+.row{display:grid;grid-template-columns:3.4em minmax(0,1fr) auto;gap:12px;align-items:center;padding:6px 0}
+.row + .row{border-top:1px dashed var(--line)}
+.row time{font-size:12px;color:var(--muted)}
+.row .t{min-width:0;overflow-wrap:anywhere}
+.row a.t{text-decoration:none}
+.row a.t:hover{text-decoration:underline}
+.row a.t:focus-visible{outline:2px solid var(--stamp);outline-offset:2px;border-radius:4px}
+.chip{font-size:11px;border:1px solid var(--line);border-radius:99px;padding:1px 8px;color:var(--muted);white-space:nowrap}
+.chip.plus{border-color:var(--gold);color:var(--gold)}
+.more{background:none;border:0;padding:4px 0;color:var(--stamp);font:inherit;font-size:13px;cursor:pointer;text-align:left}
+.more:focus-visible{outline:2px solid var(--stamp);border-radius:4px}
+.empty{color:var(--muted);font-size:14px;margin:0}
+footer{color:var(--muted);font-size:12px;text-align:center;display:grid;gap:4px}
+
+@media (max-width:640px){
+  .hero{grid-template-columns:1fr}
+  .tally{border-left:none;border-top:2px dashed var(--line);padding:16px 0 0}
+  .row{grid-template-columns:3.2em minmax(0,1fr)}
+  .row .chip{grid-column:2;justify-self:start}
+  .wk,.grid .corner{display:none}
+  .grid{grid-template-columns:repeat(7,minmax(0,1fr))}
+}
+@media (prefers-reduced-motion: no-preference){
+  .day.hit::before{transition:transform .2s}
+  .day.hit:hover::before{transform:rotate(0deg) scale(1.06)}
+}
+</style>
+</head>
+<body>
+<script id="koca-data" type="application/json">{}</script>
+
+<div class="wrap">
+  <div class="top"><b>KOCA · BanG Dream! 星球</b><span id="who"></span></div>
+
+  <section class="hero">
+    <div>
+      <h1 id="weekLabel">本週</h1>
+      <div class="big"><b class="num" id="heroN">0</b><span id="heroUnit">筆圖鑑</span></div>
+      <p class="cheer" id="cheer"></p>
+    </div>
+    <dl class="tally">
+      <div><dt>累計圖鑑</dt><dd class="num" id="totalN">0</dd></div>
+      <div><dt>本週新收藏集</dt><dd class="num" id="batchN">0</dd></div>
+      <div><dt>本週新系列</dt><dd class="num" id="seriesN">0</dd></div>
+      <div><dt>連續有更新</dt><dd class="num" id="streakN">0 週</dd></div>
+      <div class="goal"><dt id="goalLabel">下一個里程碑</dt>
+        <div class="bar"><i id="goalBar" style="width:0"></i></div>
+        <small id="goalNote"></small></div>
+    </dl>
+  </section>
+
+  <section class="card" aria-labelledby="stampTitle">
+    <div class="card-head">
+      <h2 id="stampTitle">集章卡</h2>
+      <p>有更新的日子蓋一個章</p>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="legend">
+      <span><i style="background:var(--stamp)"></i>數字＝當天新增的圖鑑筆數</span>
+      <span><i style="border:1.5px dashed var(--gold)"></i>開始記錄前，只知道當天建了幾個系列</span>
+    </div>
+  </section>
+
+  <section id="ledger" style="display:grid;gap:36px" aria-label="每週紀錄"></section>
+
+  <footer>
+    <span id="foot"></span>
+    <span>圖鑑筆數取自你 KOCA 個人頁的「已新增圖鑑」；收藏集與系列是整個星球的新增（KOCA 沒有公開建立者）。</span>
+  </footer>
+</div>
+
+<script>
+const R = JSON.parse(document.getElementById('koca-data').textContent || '{}');
+const pad = n => String(n).padStart(2,'0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); };
+const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const md = d => `${d.getMonth()+1}/${d.getDate()}`;
+const fmt = n => Number(n).toLocaleString('zh-TW');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function render(){
+  if (!R.weeks) { document.getElementById('cheer').textContent = '還沒有資料，請先執行 koca_weekly.py。'; return; }
+  const today = parse(R.today);
+  const thisWeek = R.weeks[0], lastWeek = R.weeks.find(w => w.start === ymd(addDays(parse(thisWeek.start),-7)));
+  const mon = parse(thisWeek.start);
+
+  const u = R.user;
+  document.getElementById('who').innerHTML = `<a href="${esc(u.url)}" target="_blank" rel="noopener">${esc(u.nickname)} @${esc(u.username)}</a>`;
+  document.getElementById('weekLabel').textContent = `${u.nickname} 本週 ${md(mon)}–${md(addDays(mon,6))}`;
+
+  const hasItems = thisWeek.items !== null && thisWeek.items !== undefined;
+  document.getElementById('heroN').textContent = hasItems ? fmt(thisWeek.items) : thisWeek.series.length;
+  document.getElementById('heroUnit').textContent = hasItems ? '筆新圖鑑' : '個新系列';
+  document.getElementById('totalN').textContent = fmt(u.items);
+  document.getElementById('batchN').textContent = thisWeek.batches.length;
+  document.getElementById('seriesN').textContent = thisWeek.series.length;
+
+  let streak = 0, w = mon;
+  const active = new Set(R.weeks.filter(x => x.items || x.batches.length || x.series.length || x.grown.length).map(x => x.start));
+  if (!active.has(ymd(w))) w = addDays(w,-7);
+  while (active.has(ymd(w))) { streak++; w = addDays(w,-7); }
+  document.getElementById('streakN').textContent = `${streak} 週`;
+
+  const step = 1000, next = Math.floor(u.items/step)*step + step;
+  document.getElementById('goalLabel').textContent = `下一個里程碑：${fmt(next)} 筆`;
+  document.getElementById('goalBar').style.width = `${Math.round((u.items % step)/step*100)}%`;
+  document.getElementById('goalNote').textContent = `還差 ${fmt(next-u.items)} 筆`;
+
+  const dayN = (today.getDay()+6)%7 + 1;
+  let cheer;
+  if (!hasItems) cheer = `每天的圖鑑筆數從 ${md(addDays(parse(R.tracked_from),0))} 開始記錄。這週星球上已經多了 ${thisWeek.series.length} 個系列。`;
+  else if (thisWeek.items === 0) cheer = lastWeek && lastWeek.items ? `這週還沒蓋章。上週新增了 ${fmt(lastWeek.items)} 筆，休息一下也沒關係。` : '這週還沒蓋章，有空再來。';
+  else if (lastWeek && lastWeek.items != null) {
+    cheer = thisWeek.items >= lastWeek.items
+      ? `已經超過上週的 ${fmt(lastWeek.items)} 筆了。每一筆都是有人搜尋時會找到的資料。`
+      : `這週才過了 ${dayN} 天，上週一共 ${fmt(lastWeek.items)} 筆，進度很穩。`;
+  } else cheer = `這週已經新增 ${fmt(thisWeek.items)} 筆，每一筆都是有人搜尋時會找到的資料。`;
+  document.getElementById('cheer').textContent = cheer;
+
+  // stamp grid
+  const start = parse(R.stamp_start);
+  let html = '<span class="corner"></span>' + ['一','二','三','四','五','六','日'].map(d=>`<span class="dow">${d}</span>`).join('');
+  for (let wk = new Date(start); wk <= mon; wk = addDays(wk,7)) {
+    html += `<span class="wk num">${md(wk)}</span>`;
+    for (let i=0;i<7;i++){
+      const d = addDays(wk,i), k = ymd(d), v = R.days[k];
+      const items = v && v.items, s = v ? v.series : 0;
+      const hit = items > 0 || (v && (v.batches > 0 || (items == null && s > 0)));
+      const soft = hit && !(items > 0);
+      const r = ((d.getDate()*37 + d.getMonth()*11)%17)-8;
+      const cls = ['day', hit?'hit':'', soft?'soft':'', k===R.today?'today':'', d>today?'future':''].join(' ');
+      let inner = `<span class="num">${d.getDate()}</span>`, tip = k;
+      if (hit && items > 0) { inner = `<b class="num">${items}</b><em class="num">${d.getDate()}</em>`; tip += `：${items} 筆圖鑑`; }
+      else if (hit) { const n = v.batches || s; inner = `<b class="num">${n}</b><small>${v.batches?'收藏集':'系列'}</small><em class="num">${d.getDate()}</em>`; tip += `：${n} 個${v.batches?'收藏集':'系列'}`; }
+      html += `<div class="${cls}" style="--r:${r}deg" title="${tip}">${inner}</div>`;
+    }
+  }
+  document.getElementById('grid').innerHTML = html;
+
+  // ledger
+  const LIMIT = 8;
+  const list = (rows, id) => {
+    if (rows.length <= LIMIT) return rows.join('');
+    return rows.slice(0,LIMIT).join('') + `<div hidden id="${id}">${rows.slice(LIMIT).join('')}</div><button class="more" type="button" data-for="${id}">再顯示 ${rows.length-LIMIT} 個</button>`;
+  };
+  document.getElementById('ledger').innerHTML = R.weeks.map((wk,i)=>{
+    const s = parse(wk.start);
+    const name = i===0 ? '本週' : ymd(addDays(mon,-7))===wk.start ? '上週' : `${md(s)} 那週`;
+    const stats = [wk.items ? `${fmt(wk.items)} 筆圖鑑` : null, wk.batches.length ? `${wk.batches.length} 個收藏集` : null, wk.series.length ? `${wk.series.length} 個新系列` : null].filter(Boolean).join(' · ');
+    const series = wk.series.map(x=>`<div class="row"><time class="num">${md(parse(x.date))}</time><a class="t" href="https://koca.shop/series/${x.id}" target="_blank" rel="noopener">${esc(x.name)}</a><span class="chip">新系列</span></div>`);
+    const batches = wk.batches.map(x=>`<div class="row"><time class="num">${md(parse(x.date))}</time><span class="t">${esc(x.name)}</span><span class="chip">${x.release?esc(x.release.slice(0,7))+' 發售':'收藏集'}</span></div>`);
+    const grown = wk.grown.map(x=>`<div class="row"><time></time><a class="t" href="https://koca.shop/series/${x.id}" target="_blank" rel="noopener">${esc(x.name)}</a><span class="chip plus num">+${x.n}</span></div>`);
+    const body = [
+      batches.length ? `<div class="group"><h3>新收藏集</h3>${list(batches,'b'+i)}</div>` : '',
+      series.length ? `<div class="group"><h3>新系列</h3>${list(series,'s'+i)}</div>` : '',
+      grown.length ? `<div class="group"><h3>舊系列補了圖鑑</h3>${list(grown,'g'+i)}</div>` : '',
+    ].join('');
+    return `<div class="week"><div class="week-head"><h2>${name}</h2><span class="ct num">${stats || '還沒有新增'}</span><span class="rng num">${md(s)}–${md(addDays(s,6))}</span></div>${body || '<p class="empty">這週還沒有新增，下次執行時會更新。</p>'}</div>`;
+  }).join('');
+  document.querySelectorAll('.more').forEach(b => b.addEventListener('click', () => { document.getElementById(b.dataset.for).hidden = false; b.remove(); }));
+
+  const g = new Date(R.generated_at);
+  document.getElementById('foot').textContent = `資料更新於 ${isNaN(g) ? R.generated_at : g.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',dateStyle:'medium',timeStyle:'short'})} · 每天晚上自動更新`;
+}
+render();
+</script>
+</body>
+</html>
