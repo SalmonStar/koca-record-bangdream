@@ -1,9 +1,11 @@
-name: 每日更新 KOCA 集章卡
+name: 手動更新 KOCA 集章卡
 
+# KOCA 會擋 GitHub 的主機（403），所以每日排程改在自己的 Mac 上跑（見 setup_mac.sh）。
+# 這裡只保留手動執行，之後若 KOCA 不再擋，可以把 schedule 加回來：
+#   schedule:
+#     - cron: "47 15 * * *"   # 每天台北時間 23:47
 on:
-  schedule:
-    - cron: "47 15 * * *"   # 每天台北時間 23:47
-  workflow_dispatch:         # 也可以在 Actions 頁面手動按 Run
+  workflow_dispatch:
 
 permissions:
   contents: write

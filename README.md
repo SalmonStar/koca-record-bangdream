@@ -14,34 +14,29 @@
 
 每日筆數從 2026-10-22 開始累積（10/21 是第一份基準資料）。在那之前的週次只有「新系列」，因為 KOCA 有記錄系列的建立時間。
 
-## 架到網路上（GitHub Pages，免費）
+## 網址
 
-1. 在 GitHub 建一個新的 repository，例如 `koca-record-bangdream`，設成 Public。
-2. 把這個資料夾的所有檔案上傳上去（包含隱藏的 `.github` 資料夾）。
-   用網頁上傳時 `.github` 可能被略過，可以在 GitHub 上手動新增 `.github/workflows/update.yml`，內容複製過去。
-3. Settings → Pages → Build and deployment：Source 選 **Deploy from a branch**，Branch 選 `main`、資料夾選 `/docs`，按 Save。
-4. Settings → Actions → General → Workflow permissions：選 **Read and write permissions**，按 Save。
-5. 到 Actions 分頁，點「每日更新 KOCA 集章卡」→ **Run workflow** 先手動跑一次。
-6. 幾分鐘後網址就會生效：`https://salmonstar.github.io/koca-record-bangdream/`
+https://salmonstar.github.io/koca-record-bangdream/
 
-之後每天台北時間 23:47 會自動更新。
+（Settings → Pages 設定為 main 分支的 /docs 資料夾）
 
-## 如果 GitHub Actions 被 KOCA 擋下
+## 每天自動更新（在自己的 Mac 上）
 
-KOCA 前面有 Cloudflare 防護，雲端主機的連線有可能被擋（Actions 會顯示 403 錯誤）。
-這時改成在自己電腦上跑，家裡的網路通常不會被擋：
+KOCA 會擋 GitHub 雲端主機（403），所以改在自己電腦上跑。只要設定一次：
 
 ```bash
-pip install -r requirements.txt
-python koca_weekly.py
+cd ~
+git clone https://github.com/SalmonStar/koca-record-bangdream.git
+cd koca-record-bangdream
+./setup_mac.sh
 ```
 
-跑完會更新 `docs/index.html`，再 push 到 GitHub 即可。
+之後每天 23:47 會自動抓資料、更新網頁、推到 GitHub。電腦那時候在睡覺的話，醒來會補跑；
+幾天沒開機也沒關係，筆數差額會算在下次執行的那一天，不會漏。
 
-- **Mac**：可以用「捷徑」或 `crontab -e` 加一行 `47 23 * * * cd ~/koca-record-bangdream && python3 koca_weekly.py && git add -A && git commit -m 更新 && git push`
-- **Windows**：用「工作排程器」每天執行同樣的指令。
-
-電腦沒開的那幾天不會記錄，但下次執行時會把中間的差額算在那一天，筆數不會漏。
+- 看執行紀錄：`cat ~/Library/Logs/koca-record.log`
+- 想馬上更新一次：`./run_daily.sh`
+- 停止自動更新：`launchctl unload ~/Library/LaunchAgents/com.salmonstar.koca-record.plist`
 
 ## 檔案
 
@@ -50,7 +45,9 @@ koca_weekly.py              抓資料、比對、產生網頁
 template.html               網頁範本（改外觀改這個）
 data/snapshots/*.json       每天一份快照
 docs/index.html             產生出來的網頁（GitHub Pages 發布這個）
-.github/workflows/update.yml 每日自動執行
+setup_mac.sh                Mac 一鍵安裝每日排程
+run_daily.sh                每天執行的內容
+.github/workflows/update.yml 雲端手動執行（目前被 KOCA 擋）
 ```
 
 ## 想改的話
