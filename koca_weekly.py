@@ -197,6 +197,21 @@ def load_snapshots() -> list[tuple[date, dict]]:
     return out
 
 
+def merge_same_day(snap: dict, day: date) -> None:
+    """同一天跑第二次時，快照會覆寫；把當天前幾次已經算到的角色新增累加進來，才不會遺失。"""
+    p = SNAP_DIR / f"{day.isoformat()}.json"
+    if not p.exists() or "new_items" not in snap:
+        return
+    old = json.loads(p.read_text(encoding="utf-8")).get("new_items")
+    if not old:
+        return
+    ni = snap["new_items"]
+    for name, n in old.get("chars", {}).items():
+        ni["chars"][name] = ni["chars"].get(name, 0) + n
+    for k in ("total", "group", "other"):
+        ni[k] = ni.get(k, 0) + old.get(k, 0)
+
+
 # ── 計算 ──────────────────────────────────────────────
 def tw_date(iso_utc: str) -> date:
     return datetime.fromisoformat(iso_utc).replace(tzinfo=timezone.utc).astimezone(TZ).date()
@@ -358,6 +373,7 @@ def main() -> int:
     elif not args.no_fetch:
         snap = fetch_snapshot()
         count_new_items(snap)
+        merge_same_day(snap, today)
         p = save_snapshot(snap, today)
         print(f"已存快照 {p.name}：{NICKNAME} 累計 {snap['user']['items']} 筆，"
               f"{len(snap['series'])} 個系列，{len(snap['batches'])} 個收藏集")
